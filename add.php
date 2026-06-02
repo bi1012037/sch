@@ -1,58 +1,119 @@
-
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>查詢結果</title>
-<style>
-
-.fontst{
-   font-family:DFKai-sb,Times New Roman;
-   font-size:16px;
-}
-
-</style>
-</head>
-<!--<body onload="parent.formreset()">-->
-<body>
-
 <?php
-function get_ip(){
-if (!empty($_SERVER["HTTP_CLIENT_IP"])){
-$ip = $_SERVER["HTTP_CLIENT_IP"];
-}elseif(!empty($_SERVER["HTTP_X_FORWARDED_FOR"])){
-$ip = $_SERVER["HTTP_X_FORWARDED_FOR"];
-}else{
-$ip = $_SERVER["REMOTE_ADDR"];
-}
-return $ip;
-}
+header("Content-Type: text/html; charset=utf-8");
 
 function get_real_ip(){
-    $ip=false;
-    if(!empty($_SERVER['HTTP_CLIENT_IP'])){
-        $ip=$_SERVER['HTTP_CLIENT_IP'];
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        return trim($ips[0]);
     }
-    if(!empty($_SERVER['HTTP_X_FORWARDED_FOR'])){ 
-        $ips=explode (', ', $_SERVER['HTTP_X_FORWARDED_FOR']);
-        if($ip){ array_unshift($ips, $ip); $ip=FALSE; }
-        for ($i=0; $i < count($ips); $i++){
-            if(!preg_match('/^(10172\.16192\.168)\./i', $ips[$i])){
-                $ip=$ips[$i];
-                break;
-            }
-        }
-    }
-    return($ip ? $ip : $_SERVER['REMOTE_ADDR']);
+    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
-$reip=get_real_ip();
-header('Content-Type: text/html;charset=UTF-8');
-$who=$_REQUEST["who"];
-$status=$_REQUEST[$who."_status"];
-//$who_input=$_REQUEST[$who."_input"];
-$who_input=$_GET[$who."_input"];
-$v=$_REQUEST["v"];
-$s='_';
-echo "<script>parent.document.querySelector('#{$who}_send_input').value='';</script>";
-$output=shell_exec("export LANG=en_US.UTF-8;/usr/bin/python3 -u /var/www/html/sch/add.py '$who$s$status$s$who_input$s$reip$s$v' 2>> /var/www/html/sch/log.txt");
-echo $output;
+
+$reip = get_real_ip();
+
+$who     = $_REQUEST["who"] ?? '';
+$status  = $_REQUEST[$who."_status"] ?? '';
+$input   = $_REQUEST[$who."_input"] ?? '';
+$v       = $_REQUEST["v"] ?? '';
+
+$file = __DIR__ . "/lst.txt";
+
+$status_dict = [
+    "0"=>"起床囉!",
+    "1"=>"準備午餐中!",
+    "2"=>"出門去!",
+    "3"=>"工作中!",
+    "4"=>"吃晚餐!",
+    "5"=>"洗澡中!",
+    "6"=>"愛睏中!",
+    "7"=>"其他!"
+];
+
+// 清空 input
+echo "<script>
+parent.document.querySelector('#{$who}_send_input').value='';
+</script>";
+
+// 建檔
+if (!file_exists($file)) {
+    file_put_contents($file, "{}");
+}
+
+// 讀 JSON + 去 BOM
+$json = file_get_contents($file);
+$json = preg_replace('/^\xEF\xBB\xBF/', '', $json);
+
+$vc = json_decode($json, true);
+if (!is_array($vc)) $vc = [];
+
+/*
+--------------------------------------------------
+防重複（取代 Python 那段）
+--------------------------------------------------
+*/
+$last = end($vc);
+
+if ($last &&
+    $last['who'] === $who &&
+    $last['who_status'] === $status &&
+    $last['who_input'] === $input
+) {
+    $last_time = strtotime($last['who_time']);
+    $now = time();
+
+    if (($now - $last_time) < 10) {
+        echo "<script>
+            alert('不要調皮，連續按太多次!!!');
+        </script>";
+        exit;
+    }
+}
+
+/*
+--------------------------------------------------
+新增資料
+--------------------------------------------------
+*/
+$index = !empty($vc) ? (max(array_keys($vc)) + 1) : 1;
+$now_time = date("Y-m-d H:i:s");
+$vc[$index] = [
+    "who_status" => $status,
+    "who_input"  => $input,
+    "who_ip"     => $reip,
+    "who_time"   => $now_time,
+    "who"        => $who
+];
+
+/*
+--------------------------------------------------
+寫回 JSON
+--------------------------------------------------
+*/
+file_put_contents(
+    $file,
+    json_encode($vc, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+);
+// -----------------------------
+// kiki 特殊處理
+// -----------------------------
+if ($who == "kiki") {
+    if ($status != "7") {
+        $input = $status_dict[$status] ?? $who_input;
+    }
+    $message = $who . "說:" . $input;
+    // 寫 log（取代 kiki.txt）
+    $line = $now_time . "," . $input . "\n";
+    file_put_contents("./kiki.txt", $line, FILE_APPEND);
+
+    // Discord webhook
+    file_get_contents(
+        "https://author.lugeshop.com/discord.php?message=" . urlencode($message) . "&channel=note"
+    );
+
+    // LINE webhook
+    file_get_contents(
+        "https://author.lugeshop.com/linev2.php?message=" . urlencode($message)
+    );
+}
+echo "OK";
 ?>

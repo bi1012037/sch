@@ -224,7 +224,6 @@ function sos_alert(){
 </body>
 <div align="center" style="color:orange;font-size:24px">紀錄表 <a onclick="renew();"><font color="yellow" size="6">⟳</font></a></div>
 <iframe id="myframe" name="myframe" height="100%" width="100%" frameborder="0" style="display:none;" scrolling="no"></iframe>
-<!--<iframe id="myframe2" name="myframe2" height="100%" width="100%" frameborder="0" scrolling="yes" src="https://author.lugeshop.com/sch/search.php?1" onload="resizeIframe(this)" style="margin:0;padding:0;"></iframe>-->
 <div id="table_show">
 <?php
 function get_real_ip(){
@@ -245,8 +244,10 @@ function get_real_ip(){
     }
     return($ip ? $ip : $_SERVER['REMOTE_ADDR']);
 }
-$reip=get_real_ip();
-$result = shell_exec("export LANG=en_US.UTF-8;/usr/bin/python3 -u /var/www/html/sch/search_v2.py $reip 'first' 2>> /var/www/html/sch/log.txt");
+ob_start();
+$_GET['index'] = $_SERVER['HTTP_REFERER'] ?? 'first';
+include '/var/www/html/sch/search.php';
+$result = ob_get_clean();
 echo $result;
 ?>
 </div>
@@ -265,18 +266,6 @@ if(m<10){m="0"+m;}
 if(d<10){d="0"+d;}
 document.querySelector("#end_date").max=y+"-"+m+"-"+d;
 document.querySelector("#end_date").value=y+"-"+m+"-"+d;
-/*function renew(){
-    jQuery("#deer_form").load(location.href + " #deer_form:first");
-    //jQuery("#deer_form").load("https://author.lugeshop.com/sch/search_no_alert.php" + " #deer_form >*");
-    $(document).ready(function() {
-        var rowCount = $("#sch_width2 tr").length;
-        var len = parseInt(document.querySelector("#message_len").textContent);
-        if(rowCount>1 && rowCount>len){
-            document.querySelector("#music_go").click();
-            document.querySelector("#message_len").innerText=rowCount;
-        }
-    });
-}*/
 function renew() {
     jQuery("#deer_form").load(location.href + " #deer_form:first>*", function() {
         // 在内容重新加载后手动重新绑定点击事件
@@ -286,7 +275,7 @@ function renew() {
         var rowCountFirst = $("#sch_width2 tr:eq(1) td:eq(1)").text();
         var len = parseInt(document.querySelector("#message_len").textContent);
         //console.log(rowCountFirst);
-        if($("#sch_width2 tr:eq(1) td:eq(0)").text()=="查無資料"){
+        if($("#sch_width2 tr:eq(1) td").text().trim()=="查無資料"){
             rowCount = 0;
         }
         if (rowCountFirst!="" && rowCount > len) {
@@ -313,28 +302,6 @@ $(document).ready(function() {
     // 第一次进入时执行 renew 函数
     renew();
 });
-//重複執行某個方法
-//var t2 = window.setInterval("renew()",5000);
-/*const socket = new WebSocket("wss://websocket.lugeshop.com/ws/");
-let currentMessage = "";  // 儲存目前的訊息
-
-socket.onopen = function(event) {
-    console.log("WebSocket connection established.");
-};
-
-socket.onmessage = function(event) {
-    const messagesDiv = document.getElementById("messages");
-    const newMessage = event.data;
-    //console.log(newMessage);
-    if (newMessage !== currentMessage) {
-        renew();
-    }
-};
-
-socket.onclose = function(event) {
-    console.log("WebSocket connection closed.");
-};*/
-//const socketUrl = "wss://test3.lugeshop.com/ws/"; //wss://websocket.lugeshop.com/ws/
 const socketUrl = [
     "wss://test3.lugeshop.com/ws/",
     "wss://author.lugeshop.com/ws/"
@@ -361,7 +328,7 @@ function connectWebSocket() {
         clearInterval(reconnectTimeout); // 清除重新連接計時器
         reconnectInterval = 1000; // 重新連接成功後，重設重新連接間隔
         reconnectAttempts = 0; // 重設重新連線次數
-        //currentUrlIndex = 0;
+        currentUrlIndex = 0;
     };
 
     socket.onmessage = function(event) {

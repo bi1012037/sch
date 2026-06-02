@@ -1,55 +1,73 @@
-
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-<title>查詢結果</title>
-<style>
-
-.fontst{
-   font-family:DFKai-sb,Times New Roman;
-   font-size:16px;
-}
-
-</style>
-</head>
-<!--<body onload="parent.formreset()">-->
-<body>
-
 <?php
-function get_ip(){
-if (!empty($_SERVER["HTTP_CLIENT_IP"])){
-$ip = $_SERVER["HTTP_CLIENT_IP"];
-}elseif(!empty($_SERVER["HTTP_X_FORWARDED_FOR"])){
-$ip = $_SERVER["HTTP_X_FORWARDED_FOR"];
-}else{
-$ip = $_SERVER["REMOTE_ADDR"];
-}
-return $ip;
+header("Content-Type: text/html; charset=utf-8");
+
+$file = __DIR__ . "/lst.txt";
+
+$who = $_GET['who'] ?? '';
+$id  = $_GET['status_id'] ?? '';
+$v   = $_GET['v'] ?? '';
+
+// 基本防呆
+if ($id === '' || !file_exists($file)) {
+    exit("invalid request");
 }
 
-function get_real_ip(){
-    $ip=false;
-    if(!empty($_SERVER['HTTP_CLIENT_IP'])){
-        $ip=$_SERVER['HTTP_CLIENT_IP'];
-    }
-    if(!empty($_SERVER['HTTP_X_FORWARDED_FOR'])){ 
-        $ips=explode (', ', $_SERVER['HTTP_X_FORWARDED_FOR']);
-        if($ip){ array_unshift($ips, $ip); $ip=FALSE; }
-        for ($i=0; $i < count($ips); $i++){
-            if(!preg_match('/^(10172\.16192\.168)\./i', $ips[$i])){
-                $ip=$ips[$i];
-                break;
+// 讀 JSON
+$json = file_get_contents($file);
+
+// 去 BOM（你前面已經踩過）
+$json = preg_replace('/^\xEF\xBB\xBF/', '', $json);
+
+$data = json_decode($json, true);
+
+if (!is_array($data)) {
+    $data = [];
+}
+$target = $data[$id] ?? null;
+// -----------------------------
+// 2. 如果有圖片 → 刪檔案
+// -----------------------------
+if ($target && isset($target['who_input'])) {
+
+    $html = $target['who_input'];
+
+    // 抓 src="..."
+    if (preg_match('/src=["\'](.*?)["\']/', $html, $m)) {
+
+        $imgPath = $m[1];
+        $imgPath = ltrim($imgPath, './');
+        // 只允許刪 /upload/
+        if (strpos($imgPath, 'upload/') !== false) {
+
+             $realPath = __DIR__ . '/' . $imgPath;
+
+            if (file_exists($realPath)) {
+                unlink($realPath);
+            }else {
+                echo "FILE NOT FOUND: $realPath";
             }
         }
     }
-    return($ip ? $ip : $_SERVER['REMOTE_ADDR']);
 }
-$reip=get_real_ip();
-header('Content-Type: text/html;charset=UTF-8');
-$who=$_REQUEST["who"];
-$status_id=$_REQUEST["status_id"];
-$v=$_REQUEST["v"];
-$s='_';
-$output=shell_exec("export LANG=en_US.UTF-8;/usr/bin/python3 -u /var/www/html/sch/delete.py '$who$s$status_id$s$v' 2>> /var/www/html/sch/log.txt");
-echo $output;
-?>
+// 刪除資料
+if (isset($data[$id])) {
+    unset($data[$id]);
+}
+
+// 重新排序 key（可選）
+$data = array_values($data);
+$new = [];
+
+foreach ($data as $k => $vdata) {
+    $new[$k + 1] = $vdata;
+}
+
+// 寫回檔案
+file_put_contents(
+    $file,
+    json_encode($new, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+);
+
+// 回到列表
+//header("Location: search.php");
+exit;

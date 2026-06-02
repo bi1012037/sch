@@ -2,7 +2,8 @@
 header('Content-type: application/json;charset=utf-8');
 $fp    = 'lst.txt';
 $myfile = fopen($fp, "r");
-$data = fgets($myfile);
+//$data = fgets($myfile);
+$data = file_get_contents($fp);
 fclose($myfile);
 echo substr_count($data,"who_status");
 ?>
