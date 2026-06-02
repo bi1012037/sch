@@ -75,6 +75,7 @@ body{
     width:100%;
     height:auto;
 }
+.min {width:250% !important;height:auto;z-index:9999;position: relative;right: 30%;}
 </style>
 
 <script>
