@@ -1,0 +1,1 @@
+﻿{1: {'who_status': '1', 'who_input': '', 'who_ip': '125.228.205.164', 'who_time': '2023-02-24 12:02:57', 'who': 'deer'}, 2: {'who_status': '7', 'who_input': '好消息，智冠說我的API申請過囉', 'who_ip': '125.228.205.164', 'who_time': '2023-02-24 15:46:18', 'who': 'deer'}}

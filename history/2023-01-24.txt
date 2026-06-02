@@ -1,0 +1,1 @@
+﻿{1: {'who_status': '0', 'who_input': '', 'who_ip': '125.228.205.164', 'who_time': '2023-01-24 08:47:38', 'who': 'deer'}, 2: {'who_status': '7', 'who_input': '我姊他們去動物園囉，細漢在家裡吃午餐', 'who_ip': '125.228.205.164', 'who_time': '2023-01-24 12:22:44', 'who': 'deer'}, 3: {'who_status': '4', 'who_input': '', 'who_ip': '125.228.205.164', 'who_time': '2023-01-24 18:40:57', 'who': 'deer'}}

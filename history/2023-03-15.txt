@@ -1,0 +1,1 @@
+﻿{1: {'who_status': '7', 'who_input': '大會報告~有第一家遊戲廠商跟我合作囉', 'who_ip': '125.228.205.164', 'who_time': '2023-03-15 11:52:48', 'who': 'deer'}, 2: {'who_status': '7', 'who_input': '圖片上傳<br><img style=width:100% src=./upload/20230315/1678852371.jpg>', 'who_ip': '125.228.205.164', 'who_time': '2023-03-15 11:52:51', 'who': 'deer'}}

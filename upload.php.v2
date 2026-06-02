@@ -1,0 +1,112 @@
+<?php
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+header('Content-Type: text/html; charset=UTF-8');
+
+function get_real_ip(){
+    $ip = false;
+
+    if(!empty($_SERVER['HTTP_CLIENT_IP'])){
+        $ip = $_SERVER['HTTP_CLIENT_IP'];
+    }
+
+    if(!empty($_SERVER['HTTP_X_FORWARDED_FOR'])){
+        $ips = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        if($ip){ array_unshift($ips, $ip); $ip = false; }
+
+        foreach ($ips as $i){
+            if(!preg_match('/^(10|172|192)\./', trim($i))){
+                $ip = trim($i);
+                break;
+            }
+        }
+    }
+
+    return $ip ? $ip : $_SERVER['REMOTE_ADDR'];
+}
+
+echo "<pre>";
+echo "=== DEBUG START ===\n";
+
+// 1️⃣ 檢查是否有 file
+if (!isset($_FILES['my_file'])) {
+    die("❌ ERROR: 沒有收到 my_file\n");
+}
+
+echo "✔ FILE EXISTS\n";
+print_r($_FILES['my_file']);
+
+// 2️⃣ upload error
+if ($_FILES['my_file']['error'] !== UPLOAD_ERR_OK) {
+    die("❌ UPLOAD ERROR CODE: ".$_FILES['my_file']['error']."\n");
+}
+
+echo "✔ UPLOAD OK\n";
+
+// 3️⃣ tmp file check
+$tmp = $_FILES['my_file']['tmp_name'];
+
+if (!is_uploaded_file($tmp)) {
+    die("❌ tmp file 無效: $tmp\n");
+}
+
+echo "✔ TMP FILE OK: $tmp\n";
+
+// 4️⃣ 建資料夾
+$dir = './upload/'.date("Ymd").'/';
+
+if (!is_dir($dir)) {
+    mkdir($dir, 0777, true);
+    echo "✔ CREATE DIR: $dir\n";
+} else {
+    echo "✔ DIR EXISTS: $dir\n";
+}
+
+// 5️⃣ 產檔名
+$ext = pathinfo($_FILES['my_file']['name'], PATHINFO_EXTENSION);
+$ext = strtolower($ext);
+
+if ($ext == "jpeg") $ext = "jpg";
+
+$file_name = time().".".$ext;
+$dest = $dir.$file_name;
+
+echo "✔ DEST: $dest\n";
+
+// 6️⃣ move_uploaded_file（關鍵）
+if (!move_uploaded_file($tmp, $dest)) {
+    die("❌ MOVE UPLOAD FAILED\n");
+}
+
+echo "✔ MOVE OK\n";
+
+// 7️⃣ IP
+$reip = get_real_ip();
+echo "✔ IP: $reip\n";
+
+// 8️⃣ who / v
+$who = $_REQUEST["who"] ?? "unknown";
+$v = $_REQUEST["v"] ?? "";
+
+$status = "7";
+
+$who_input = "圖片上傳<br><img style='width:100%' src='$dest'>";
+
+echo "✔ who: $who\n";
+echo "✔ v: $v\n";
+
+// 9️⃣ Python call
+$cmd = "/usr/bin/python3 -u /var/www/html/sch/add.py "
+    . escapeshellarg("$who" . "_" . $status . "_" . $who_input . "_" . $reip . "_" . $v);
+
+echo "✔ CMD:\n$cmd\n";
+
+$output = shell_exec($cmd . " 2>&1");
+
+echo "✔ PYTHON OUTPUT:\n$output\n";
+
+echo "=== DEBUG END ===";
+echo "</pre>";
+?>
